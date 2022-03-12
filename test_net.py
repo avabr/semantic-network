@@ -1,5 +1,5 @@
 import pytest
-from net import SemanticNetwork
+from semantic_network.net import SemanticNetwork
 
 
 def test_net_index_consistency():

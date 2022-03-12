@@ -1,6 +1,5 @@
-import pytest
 from collections import Counter
-from net import SemanticNetwork
+from semantic_network.net import SemanticNetwork
 
 
 def collapse_chain_set(chain_set):
@@ -180,7 +179,7 @@ def test_search_pattern_3():
     sn.create_relation("hasPart", "Circle", "Circle.radius", {})
     sn.create_relation("hasPart", "Circle", "Circle.center", {})
 
-    sn.create_object("c1", {})
+    sn.create_object("c1", {"type": "some_object"})
     sn.create_relation("fromProto", "c1", "Circle", {})
     sn.create_object("c1.radius", {})
     sn.create_relation("hasPart", "c1", "c1.radius", {})
@@ -258,8 +257,40 @@ def test_search_pattern_4():
     # print(collapse_chain_set(chains))
 
 
+def test_search_pattern_5():
+
+    sn = SemanticNetwork("Main")
+    sn.create_object("Circle", {"type": "ENTITY"})
+    sn.create_object("Circle.radius", {"type": "ENTITY"})
+    sn.create_object("Circle.center", {"type": "ENTITY"})
+    sn.create_relation("hasPart", "Circle", "Circle.radius", {})
+    sn.create_relation("hasPart", "Circle", "Circle.center", {})
+
+    sn.create_object("c1", {"type": "ENTITY"})
+    sn.create_relation("fromProto", "c1", "Circle", {"type": "RELATION"})
+    sn.create_object("c1.radius", {"type": "ENTITY"})
+    sn.create_relation("hasPart", "c1", "c1.radius", {})
+
+    sn.create_object("c2", {})
+    sn.create_object("c2.radius", {})
+    sn.create_object("c2.center", {})
+    sn.create_relation("fromProto", "c2", "Circle", {})
+    sn.create_relation("hasPart", "c2", "c2.radius", {"type": "RELATION"})
+    sn.create_relation("hasPart", "c2", "c2.center", {})
+    sn.create_relation("fromProto", "c2.radius", "Circle.radius", {})
+
+    assert len(sn.select_objects({"type": "ENTITY"})) == 5
+    assert len(sn.select_objects({"someKey": "someValue"})) == 0
+    assert len(sn.select_objects({})) == 8
+
+    assert len(sn.select_relations(None, None, None, {"type": "RELATION"})) == 2
+    assert len(sn.select_relations(None, None, None, {})) == 8
+    assert len(sn.select_relations("fromProto", None, None, {"type": "RELATION"})) == 1
+
+
 if __name__ == "__main__":
     test_search_pattern_1()
     test_search_pattern_2()
     test_search_pattern_3()
     test_search_pattern_4()
+    test_search_pattern_5()

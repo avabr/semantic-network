@@ -1,17 +1,17 @@
 import networkx as nx
 
 
-class RChain:
+class SemanticQueryMatch:
     def __init__(self):
         self.match_relations = []
         self.query_relations = []
 
     @classmethod
-    def from_rchain(cls, rchain):
-        new_rchain = cls()
-        new_rchain.match_relations = list(rchain.match_relations)
-        new_rchain.query_relations = list(rchain.query_relations)
-        return new_rchain
+    def from_semantic_match(cls, semantic_match):
+        new_semantic_match = cls()
+        new_semantic_match.match_relations = list(semantic_match.match_relations)
+        new_semantic_match.query_relations = list(semantic_match.query_relations)
+        return new_semantic_match
 
     def add_relation(self, match_relation, query_relation, direction):
         assert direction in ["FW", "BW"]
@@ -113,10 +113,10 @@ def search_pattern(base_graph, sub_graph, required_obj_ids=set(), required_rel_i
             matched_relations = base_graph.select_relations(*query_triplet)
             next_chains = []
             for matched_relation in matched_relations:
-                rchain = RChain()
-                add_status = rchain.add_relation(matched_relation, q_relation, "FW")
+                semantic_match = SemanticQueryMatch()
+                add_status = semantic_match.add_relation(matched_relation, q_relation, "FW")
                 if add_status:
-                    next_chains.append(rchain)
+                    next_chains.append(semantic_match)
 
         else:
             assert direction in ["FW", "BW"]
@@ -132,10 +132,10 @@ def search_pattern(base_graph, sub_graph, required_obj_ids=set(), required_rel_i
                     matched_relations = base_graph.select_relations(*query_triplet)
 
                     for matched_relation in matched_relations:
-                        rchain = RChain.from_rchain(chain)
-                        add_status = rchain.add_relation(matched_relation, q_relation, "FW")
+                        semantic_match = SemanticQueryMatch.from_semantic_match(chain)
+                        add_status = semantic_match.add_relation(matched_relation, q_relation, "FW")
                         if add_status:
-                            next_chains.append(rchain)
+                            next_chains.append(semantic_match)
 
             elif direction == "BW":
                 for chain in chains:
@@ -148,10 +148,10 @@ def search_pattern(base_graph, sub_graph, required_obj_ids=set(), required_rel_i
                     matched_relations = base_graph.select_relations(*query_triplet)
 
                     for matched_relation in matched_relations:
-                        rchain = RChain.from_rchain(chain)
-                        add_status = rchain.add_relation(matched_relation, q_relation, "BW")
+                        semantic_match = SemanticQueryMatch.from_semantic_match(chain)
+                        add_status = semantic_match.add_relation(matched_relation, q_relation, "BW")
                         if add_status:
-                            next_chains.append(rchain)
+                            next_chains.append(semantic_match)
 
         chains.clear()
         chains.extend(next_chains)
