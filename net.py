@@ -1,3 +1,4 @@
+import json
 from jsonschema import validate
 from semantic_network.net_search import search_pattern
 from semantic_network.net_archivation import SemanticNetArchiver
@@ -244,6 +245,18 @@ class SemanticNetwork:
     def from_dict(cls, dict_data):
         archiver = SemanticNetArchiver()
         return archiver.load(cls, dict_data)
+
+    def dump(self, path):
+        data = self.to_dict()
+        with open(path, "w") as f:
+            f.write(json.dumps(data, indent=4))
+
+    @classmethod
+    def load(cls, path):
+        with open(path) as f:
+            data = f.read()
+        net = cls.from_dict(json.loads(data))
+        return net
 
 
 if __name__ == "__main__":
