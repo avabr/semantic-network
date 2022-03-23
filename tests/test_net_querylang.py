@@ -16,25 +16,26 @@ def collapse_chain_set(chain_set):
 
 def test_lang_pattern_3():
 
-    sn = SemanticNetwork("Main")
-    sn.create_object("Circle", {})
-    sn.create_object("Circle.radius", {})
-    sn.create_object("Circle.center", {})
-    sn.create_relation("hasPart", "Circle", "Circle.radius", {})
-    sn.create_relation("hasPart", "Circle", "Circle.center", {})
+    sn_script = """
+        (Circle) {}
+        (Circle.radius) {}
+        (Circle.center) {}
+        (hasPart Circle Circle.radius) {}
+        (hasPart Circle Circle.center) {}
+        (c1) {"type": "some_object"}
+        (fromProto c1 Circle) {}
+        (c1.radius) {}
+        (hasPart c1 c1.radius) {}
+        (c2) {}
+        (c2.radius) {}
+        (c2.center) {}
+        (fromProto c2 Circle) {}
+        (hasPart c2 c2.radius) {}
+        (hasPart c2 c2.center) {}
+        (fromProto c2.radius Circle.radius) {}
+    """
 
-    sn.create_object("c1", {"type": "some_object"})
-    sn.create_relation("fromProto", "c1", "Circle", {})
-    sn.create_object("c1.radius", {})
-    sn.create_relation("hasPart", "c1", "c1.radius", {})
-
-    sn.create_object("c2", {})
-    sn.create_object("c2.radius", {})
-    sn.create_object("c2.center", {})
-    sn.create_relation("fromProto", "c2", "Circle", {})
-    sn.create_relation("hasPart", "c2", "c2.radius", {})
-    sn.create_relation("hasPart", "c2", "c2.center", {})
-    sn.create_relation("fromProto", "c2.radius", "Circle.radius", {})
+    sn = SemanticNetwork.from_script(sn_script)
 
     q = """
         (*Class) {}
@@ -46,7 +47,7 @@ def test_lang_pattern_3():
         (hasPart *Object *Object.part) {}
         (fromProto *Object.part *Class.part) {}
     """
-    chains = sn.search_query(q)
+    chains = sn.search_query_script(q)
 
     right_mapping_counter = {
         ("obj", "Object", "c2"): 1,

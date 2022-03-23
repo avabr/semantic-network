@@ -1,4 +1,3 @@
-import pytest
 from semantic_network.net import SemanticNetwork
 
 

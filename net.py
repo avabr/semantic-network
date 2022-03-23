@@ -3,6 +3,8 @@ from jsonschema import validate
 from semantic_network.net_search import search_pattern
 from semantic_network.net_archivation import SemanticNetArchiver
 from semantic_network.query import SemanticQuery
+from semantic_network.net_functions import is_graph_acyclic
+from semantic_network.script import parse_script
 
 
 class Object:
@@ -59,6 +61,19 @@ class SemanticNetwork:
         self.relations_by_relation_id = {}
         self.relations_by_source_id = {}
         self.relations_by_target_id = {}
+
+    @classmethod
+    def from_script(cls, script, name="Default"):
+        items = parse_script(script)
+
+        sn = cls(name)
+        for ids, props in items:
+            if len(ids) == 1:
+                sn.create_object(ids[0], props)
+            elif len(ids) == 3:
+                sn.create_relation(ids[0], ids[1], ids[2], props)
+
+        return sn
 
     def get_object_iterator(self):
         return iter(self.objects_by_id.values())
@@ -223,8 +238,11 @@ class SemanticNetwork:
     def search_pattern(self, sub_graph, required_obj_ids, required_rel_ids):
         return search_pattern(self, sub_graph, required_obj_ids, required_rel_ids)
 
-    def search_query(self, query_script):
+    def search_query_script(self, query_script):
         return SemanticQuery(self, query_script)
+
+    def is_acyclic(self, relation_id):
+        return is_graph_acyclic(self, relation_id)
 
     def describe(self):
         info = [
@@ -257,36 +275,3 @@ class SemanticNetwork:
             data = f.read()
         net = cls.from_dict(json.loads(data))
         return net
-
-
-if __name__ == "__main__":
-
-    sn = SemanticNetwork("Main")
-    sn.create_object("Circle", {"type": "ENTITY"})
-    sn.create_object("Circle.radius", {"type": "ENTITY"})
-    sn.create_object("Circle.center", {"type": "ENTITY"})
-    sn.create_relation("hasPart", "Circle", "Circle.radius", {})
-    sn.create_relation("hasPart", "Circle", "Circle.center", {})
-
-    sn.create_object("c1", {"type": "ENTITY"})
-    sn.create_relation("fromProto", "c1", "Circle", {})
-    sn.create_object("c1.radius", {"type": "ENTITY"})
-    sn.create_relation("hasPart", "c1", "c1.radius", {})
-
-    sn.create_object("c2", {})
-    sn.create_object("c2.radius", {})
-    sn.create_object("c2.center", {})
-    sn.create_relation("fromProto", "c2", "Circle", {})
-    sn.create_relation("hasPart", "c2", "c2.radius", {})
-    sn.create_relation("hasPart", "c2", "c2.center", {})
-    sn.create_relation("fromProto", "c2.radius", "Circle.radius", {})
-
-    q = SemanticNetwork("Query")
-    q.create_object("Circle", {"type": "ENTITY"})
-    q.create_object("obj", {"type": "ENTITY"})
-    q.create_relation("fromProto", "obj", "Circle", {})
-    chains = search_pattern(sn, q, set(["Circle"]), set(["fromProto"]))
-
-    for i, ch in enumerate(chains):
-        obj_mapping, rel_mapping = ch.get_mapping()
-        print("\tchain %s\t" % i, obj_mapping, rel_mapping)

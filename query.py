@@ -1,26 +1,9 @@
 import re
 import json
+from semantic_network.script import parse_script
 
 
 class SemanticQuery:
-    def _parse_query_script(self, query_script):
-
-        items = []
-
-        base_re = "^\((.+)\) *(\{.*\})$"
-        ids_re = "^\*{0,1}\S+$|^\*{0,1}\S+ \*{0,1}\S+ \*{0,1}\S+$"
-        for line in query_script.split("\n"):
-            res = re.search(base_re, line.strip())
-            if res:
-                ids = re.search(ids_re, res.groups()[0])
-                props = res.groups()[1]
-                assert ids is not None
-                ids = ids.string.split(" ")
-                props = json.loads(props)
-                items.append((ids, props))
-
-        return items
-
     def _split_required_query_items(self, query_items):
 
         new_items = []
@@ -69,7 +52,7 @@ class SemanticQuery:
     def __init__(self, semantic_network, query_script):
         self.semantic_network = semantic_network
         self.query_script = query_script
-        parsed_items = self._parse_query_script(query_script)
+        parsed_items = parse_script(query_script, query_script=True)
         splitted_items, required_obj_ids, required_rel_ids = self._split_required_query_items(
             parsed_items
         )
