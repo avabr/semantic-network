@@ -17,35 +17,35 @@ def collapse_chain_set(chain_set):
 def test_lang_pattern_3():
 
     sn_script = """
-        (Circle) {}
-        (Circle.radius) {}
-        (Circle.center) {}
-        (hasPart Circle Circle.radius) {}
-        (hasPart Circle Circle.center) {}
+        (Circle)
+        (Circle.radius)
+        (Circle.center)
+        (hasPart Circle Circle.radius)
+        (hasPart Circle Circle.center)
         (c1) {"type": "some_object"}
-        (fromProto c1 Circle) {}
-        (c1.radius) {}
-        (hasPart c1 c1.radius) {}
-        (c2) {}
-        (c2.radius) {}
-        (c2.center) {}
-        (fromProto c2 Circle) {}
-        (hasPart c2 c2.radius) {}
-        (hasPart c2 c2.center) {}
-        (fromProto c2.radius Circle.radius) {}
+        (fromProto c1 Circle)
+        (c1.radius)
+        (hasPart c1 c1.radius)
+        (c2)
+        (c2.radius)
+        (c2.center)
+        (fromProto c2 Circle)
+        (hasPart c2 c2.radius)
+        (hasPart c2 c2.center)
+        (fromProto c2.radius Circle.radius)
     """
 
     sn = SemanticNetwork.from_script(sn_script)
 
     q = """
-        (*Class) {}
-        (*Class.part) {}
-        (hasPart *Class *Class.part) {}
-        (*Object) {}
-        (fromProto *Object *Class) {}
-        (*Object.part) {}
-        (hasPart *Object *Object.part) {}
-        (fromProto *Object.part *Class.part) {}
+        (*Class)
+        (*Class.part)
+        (hasPart *Class *Class.part)
+        (*Object)
+        (fromProto *Object *Class)
+        (*Object.part)
+        (hasPart *Object *Object.part)
+        (fromProto *Object.part *Class.part)
     """
     chains = sn.search_query_script(q)
 
