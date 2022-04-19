@@ -62,6 +62,9 @@ class SemanticNetwork:
         self.relations_by_source_id = {}
         self.relations_by_target_id = {}
 
+        self.counter = 1
+        self.counter_for_element = {}
+
     @classmethod
     def from_script(cls, script, name="Default"):
         items = parse_script(script)
@@ -74,6 +77,10 @@ class SemanticNetwork:
                 sn.create_relation(ids[0], ids[1], ids[2], props)
 
         return sn
+
+    def _update_counter(self, obj_or_rel):
+        self.counter_for_element[obj_or_rel] = self.counter
+        self.counter += 1
 
     def get_object_iterator(self):
         return iter(self.objects_by_id.values())
@@ -94,6 +101,7 @@ class SemanticNetwork:
         assert obj not in self.relations_by_source_id
         assert obj not in self.relations_by_target_id
         self.objects_by_id[obj_id] = obj
+        self._update_counter(obj)
         return obj
 
     def update_object(self, obj, props):
@@ -115,7 +123,8 @@ class SemanticNetwork:
         self.relations_by_source_id.pop(obj_id, None)
         assert len(self.relations_by_target_id.get(obj_id, set())) == 0
         self.relations_by_target_id.pop(obj_id, None)
-        self.objects_by_id.pop(obj_id)
+        obj = self.objects_by_id.pop(obj_id)
+        self.counter_for_element.pop(obj)
 
     def detach_delete_object(self, obj_id):
         assert obj_id in self.objects_by_id
@@ -146,6 +155,7 @@ class SemanticNetwork:
         self.relations_by_relation_id.setdefault(id, set()).add(new_relation)
         self.relations_by_source_id.setdefault(source_obj_id, set()).add(new_relation)
         self.relations_by_target_id.setdefault(target_obj_id, set()).add(new_relation)
+        self._update_counter(new_relation)
         return new_relation
 
     def update_relation(self, id, source_obj_id, target_obj_id, props):
@@ -178,7 +188,9 @@ class SemanticNetwork:
         self.relations_by_target_id.get(target_obj_id, set()).remove(relation)
         if len(self.relations_by_target_id.get(target_obj_id, set())) == 0:
             self.relations_by_target_id.pop(target_obj_id, None)
-        self.relation_by_triplet.pop(triplet)
+        rel = self.relation_by_triplet.pop(triplet)
+
+        self.counter_for_element.pop(rel)
 
     def _check_props(self, props, query_props):
         status = True
@@ -244,6 +256,33 @@ class SemanticNetwork:
     def is_acyclic(self, relation_id):
         return is_graph_acyclic(self, relation_id)
 
+    def collect_relation_chains(self, relation_id):
+
+        assert self.is_acyclic(relation_id)
+
+        rels = self.relations_by_relation_id.get(relation_id, [])
+        parents = set([r.target_obj for r in rels])
+        children = set([r.source_obj for r in rels])
+
+        only_children = children.difference(parents)
+
+        def req(semantic_net, chain):
+            obj = chain[-1]
+            found_chains = []
+            count = 0
+            for r in semantic_net.select_relations(relation_id, obj.id, None):
+                count += 1
+                found_chains += req(semantic_net, chain + [r.target_obj])
+            if count == 0:
+                return [chain]
+            return found_chains
+
+        total_chains = []
+        for inh in only_children:
+            total_chains += req(self, [inh])
+
+        return total_chains
+
     def describe(self):
         info = [
             "-----------------------------",
@@ -264,10 +303,16 @@ class SemanticNetwork:
         archiver = SemanticNetArchiver()
         return archiver.load(cls, dict_data)
 
-    def dump(self, path):
+    def dump(self, path, variables):
         data = self.to_dict()
+        data["variables"] = variables
         with open(path, "w") as f:
             f.write(json.dumps(data, indent=4))
+
+    def copy(self):
+        data = self.to_dict()
+        sn = SemanticNetwork.from_dict(data)
+        return sn
 
     @classmethod
     def load(cls, path):
@@ -275,3 +320,9 @@ class SemanticNetwork:
             data = f.read()
         net = cls.from_dict(json.loads(data))
         return net
+
+    def push(self, path):
+        with open(path) as f:
+            data = f.read()
+        archiver = SemanticNetArchiver()
+        archiver.push(self, json.loads(data))
