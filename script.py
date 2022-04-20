@@ -6,29 +6,21 @@ def parse_script(script, query_script=False):
 
     items = []
 
-    allowed_symbols = r"\w\-.@"
+    id_re = r"^[\w\-\.@]+$"
+    if query_script:
+        id_re = r"^\*{0,1}[\w\-\.@]+$"
 
-    base_re = r"^\((.+)\)( {0,1}\{.*\}){0,1}$"
+    for line in script.strip().split("\n"):
 
-    if query_script == True:
-        ids_re = r"^\*{0,1}[$asyms]+$|^\*{0,1}[$asyms]+ \*{0,1}[$asyms]+ \*{0,1}[$asyms]+$".replace(
-            "$asyms", allowed_symbols
+        if len(line) == 0:
+            continue
+
+        ids = line.strip().split(" ")
+        assert None not in [re.search(id_re, i) for i in ids], (
+            "%s line of Semantic script is not correct" % line
         )
-    else:
-        ids_re = "^[$asyms]+$|^[$asyms]+ [$asyms]+ [$asyms]+$".replace("$asyms", allowed_symbols)
+        assert len(ids) in [1, 3], "%s line of Semantic script is not correct" % line
 
-    for line in script.split("\n"):
-        res = re.search(base_re, line.strip())
-        if res:
-            props = {}
-            if res.groups()[1] is not None:
-                props = res.groups()[1]
-                props = json.loads(props)
-
-            ids = re.search(ids_re, res.groups()[0])
-            assert ids is not None, '"%s" is not good with regex "%s"' % (res.groups()[0], ids_re)
-            ids = ids.string.split(" ")
-            assert len(ids) in [1, 3]
-            items.append((ids, props))
+        items.append(ids)
 
     return items

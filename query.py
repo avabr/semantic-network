@@ -11,7 +11,7 @@ class SemanticQuery:
         required_rel_ids = set()
         optional_obj_ids = set()
         optional_rel_ids = set()
-        for elements, props in query_items:
+        for elements in query_items:
 
             if len(elements) == 1:
                 obj_id = elements[0]
@@ -21,7 +21,7 @@ class SemanticQuery:
                     optional_obj_ids.add(obj_id)
                 else:
                     required_obj_ids.add(obj_id)
-                new_items.append(([obj_id], props))
+                new_items.append([obj_id])
 
             elif len(elements) == 3:
                 rel_id, source_obj_id, target_obj_id = elements
@@ -42,7 +42,7 @@ class SemanticQuery:
                 else:
                     required_obj_ids.add(target_obj_id)
 
-                new_items.append(([rel_id, source_obj_id, target_obj_id], props))
+                new_items.append([rel_id, source_obj_id, target_obj_id])
 
         assert len(required_obj_ids.intersection(optional_obj_ids)) == 0
         assert len(required_rel_ids.intersection(optional_rel_ids)) == 0
@@ -58,11 +58,11 @@ class SemanticQuery:
         )
 
         q = semantic_network.__class__("Query")
-        for ids, props in splitted_items:
+        for ids in splitted_items:
             if len(ids) == 1:
-                q.create_object(ids[0], props)
+                q.create_object(ids[0])
             elif len(ids) == 3:
-                q.create_relation(ids[0], ids[1], ids[2], props)
+                q.create_relation(ids[0], ids[1], ids[2])
 
         self.q = q
         self.required_obj_ids = required_obj_ids

@@ -3,13 +3,13 @@ from semantic_network.net import SemanticNetwork
 
 def test_net_index_consistency():
     sn = SemanticNetwork()
-    sn.create_object("proto@Circle", {})
-    sn.create_object("proto@Circle.x", {})
-    sn.create_object("proto@Circle.y", {})
-    sn.create_relation("hasPart", "proto@Circle", "proto@Circle.x", {})
-    sn.create_relation("hasPart", "proto@Circle", "proto@Circle.y", {})
-    sn.create_object("Circle_1", {})
-    sn.create_relation("fromProto", "Circle_1", "proto@Circle", {})
+    sn.create_object("proto@Circle")
+    sn.create_object("proto@Circle.x")
+    sn.create_object("proto@Circle.y")
+    sn.create_relation("hasPart", "proto@Circle", "proto@Circle.x")
+    sn.create_relation("hasPart", "proto@Circle", "proto@Circle.y")
+    sn.create_object("Circle_1")
+    sn.create_relation("fromProto", "Circle_1", "proto@Circle")
 
     r = sn.get_or_create_relation("hasPart", "proto@Circle", "proto@Circle.x")
 

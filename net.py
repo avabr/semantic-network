@@ -1,5 +1,4 @@
 import json
-from jsonschema import validate
 from semantic_network.net_search import search_pattern
 from semantic_network.net_archivation import SemanticNetArchiver
 from semantic_network.query import SemanticQuery
@@ -8,12 +7,11 @@ from semantic_network.script import parse_script
 
 
 class Object:
-    def __init__(self, id, props):
+    def __init__(self, id):
         self.id = id
-        self.props = props
 
     def __str__(self):
-        return "(%s %s)" % (self.id, self.props)
+        return "(%s)" % (self.id)
 
     def __hash__(self):
         return hash(self.id)
@@ -23,19 +21,17 @@ class Object:
 
 
 class Relation:
-    def __init__(self, id, source_obj, target_obj, props):
+    def __init__(self, id, source_obj, target_obj):
         assert source_obj != target_obj
         self.id = id
         self.source_obj = source_obj
         self.target_obj = target_obj
-        self.props = props
 
     def __str__(self):
-        return "[(%s) - %s -> (%s) %s]" % (
-            self.source_obj.id,
+        return "(%s %s %s)" % (
             self.id,
+            self.source_obj.id,
             self.target_obj.id,
-            self.props,
         )
 
     def __hash__(self):
@@ -50,10 +46,8 @@ class Relation:
 
 
 class SemanticNetwork:
-    def __init__(self, name="Default", obj_props_schema={}, rel_props_schema={}):
+    def __init__(self, name="Default"):
         self.name = name
-        self.obj_props_schema = obj_props_schema
-        self.rel_props_schema = rel_props_schema
 
         self.objects_by_id = {}
         self.relation_by_triplet = {}
@@ -70,11 +64,11 @@ class SemanticNetwork:
         items = parse_script(script)
 
         sn = cls(name)
-        for ids, props in items:
+        for ids in items:
             if len(ids) == 1:
-                sn.create_object(ids[0], props)
+                sn.create_object(ids[0])
             elif len(ids) == 3:
-                sn.create_relation(ids[0], ids[1], ids[2], props)
+                sn.create_relation(ids[0], ids[1], ids[2])
 
         return sn
 
@@ -94,9 +88,8 @@ class SemanticNetwork:
     def get_object(self, obj_id):
         return self.objects_by_id[obj_id]
 
-    def create_object(self, obj_id, props):
-        validate(props, self.obj_props_schema)
-        obj = Object(obj_id, props)
+    def create_object(self, obj_id):
+        obj = Object(obj_id)
         assert obj.id not in self.objects_by_id
         assert obj not in self.relations_by_source_id
         assert obj not in self.relations_by_target_id
@@ -104,17 +97,11 @@ class SemanticNetwork:
         self._update_counter(obj)
         return obj
 
-    def update_object(self, obj, props):
-        obj.props = props
-        return obj
-
-    def get_or_create_object(self, obj_id, props=None):
+    def get_or_create_object(self, obj_id):
         if obj_id in self.objects_by_id:
             obj = self.objects_by_id[obj_id]
-            if props is not None:
-                self.update_object(obj, props)
         else:
-            obj = self.create_object(obj_id, props)
+            obj = self.create_object(obj_id)
         return obj
 
     def delete_object(self, obj_id):
@@ -142,15 +129,14 @@ class SemanticNetwork:
         r = self.relation_by_triplet[(id, source_obj_id, target_obj_id)]
         return r
 
-    def create_relation(self, id, source_obj_id, target_obj_id, props):
-        validate(props, self.rel_props_schema)
+    def create_relation(self, id, source_obj_id, target_obj_id):
         assert source_obj_id in self.objects_by_id
         assert target_obj_id in self.objects_by_id
         triplet = (id, source_obj_id, target_obj_id)
         assert triplet not in self.relation_by_triplet, triplet
         source_obj = self.objects_by_id[source_obj_id]
         target_obj = self.objects_by_id[target_obj_id]
-        new_relation = Relation(id, source_obj, target_obj, props)
+        new_relation = Relation(id, source_obj, target_obj)
         self.relation_by_triplet[triplet] = new_relation
         self.relations_by_relation_id.setdefault(id, set()).add(new_relation)
         self.relations_by_source_id.setdefault(source_obj_id, set()).add(new_relation)
@@ -158,20 +144,12 @@ class SemanticNetwork:
         self._update_counter(new_relation)
         return new_relation
 
-    def update_relation(self, id, source_obj_id, target_obj_id, props):
-        triplet = (id, source_obj_id, target_obj_id)
-        relation = self.relation_by_triplet[triplet]
-        relation.props = props
-        return relation
-
-    def get_or_create_relation(self, id, source_obj_id, target_obj_id, props=None):
+    def get_or_create_relation(self, id, source_obj_id, target_obj_id):
         triplet = (id, source_obj_id, target_obj_id)
         if triplet in self.relation_by_triplet:
             relation = self.relation_by_triplet[triplet]
-            if props is not None:
-                relation.props = props
         else:
-            relation = self.create_relation(id, source_obj_id, target_obj_id, props)
+            relation = self.create_relation(id, source_obj_id, target_obj_id)
         return relation
 
     def delete_relation(self, id, source_obj_id, target_obj_id):
@@ -192,14 +170,7 @@ class SemanticNetwork:
 
         self.counter_for_element.pop(rel)
 
-    def _check_props(self, props, query_props):
-        status = True
-        for k, v in query_props.items():
-            if (k not in props) or (props[k] != v):
-                status = False
-        return status
-
-    def select_relations(self, relation_id, source_id, target_id, query_props={}):
+    def select_relations(self, relation_id, source_id, target_id):
         in_status = (relation_id is not None, source_id is not None, target_id is not None)
         if in_status == (False, False, False):
             relations = self.relation_by_triplet.values()
@@ -222,19 +193,12 @@ class SemanticNetwork:
             relations = self.relations_by_source_id.get(source_id, set())
             relations = (r for r in relations if r.target_obj.id == target_id)
             relations = (r for r in relations if r.id == relation_id)
-        if len(query_props) > 0:
-            result = [r for r in relations if self._check_props(r.props, query_props)]
-        else:
-            result = list(relations)
+
+        result = list(relations)
         return result
 
-    def select_objects(self, query_props={}):
-        if len(query_props) > 0:
-            result = [
-                o for o in self.get_object_iterator() if self._check_props(o.props, query_props)
-            ]
-        else:
-            result = [o for o in self.get_object_iterator()]
+    def select_objects(self):
+        result = [o for o in self.get_object_iterator()]
         return result
 
     def get_matched_relation(self, q_rel_id, q_source_id, q_target_id, query_match):
@@ -321,7 +285,7 @@ class SemanticNetwork:
         net = cls.from_dict(json.loads(data))
         return net
 
-    def push(self, path):
+    def append_semantic_network(self, path):
         with open(path) as f:
             data = f.read()
         archiver = SemanticNetArchiver()
