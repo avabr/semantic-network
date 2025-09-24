@@ -5,11 +5,11 @@ class SemanticNetArchiver:
 
         for o in semantic_net.get_object_iterator():
             order = semantic_net.counter_for_element[o]
-            _items[order] = [o.id]
+            _items[order] = o.id
 
         for r in semantic_net.get_relation_iterator():
             order = semantic_net.counter_for_element[r]
-            _items[order] = [r.id, r.source_obj.id, r.target_obj.id]
+            _items[order] = f"{r.source_obj.id} {r.id} {r.target_obj.id}"
 
         items = [_items[k] for k in sorted(list(_items.keys()))]
 
@@ -25,17 +25,21 @@ class SemanticNetArchiver:
         net = semantic_net_class(name=semantic_net_json["name"])
 
         for item in semantic_net_json["items"]:
-            if len(item) == 1:
-                net.create_object(item[0])
-            elif len(item) == 3:
-                net.create_relation(item[0], item[1], item[2])
+            ids = item.split(" ")
+            if len(ids) == 1:
+                net.create_object(ids[0])
+            elif len(ids) == 3:
+                o1, rel, o2 = ids[0], ids[1], ids[2]
+                net.create_relation(rel, o1, o2)
 
         return net
 
     def push(self, semantic_net, semantic_net_json):
 
         for item in semantic_net_json["items"]:
-            if len(item) == 1:
-                semantic_net.create_object(item[0])
-            elif len(item) == 3:
-                semantic_net.create_relation(item[0], item[1], item[2])
+            ids = item.split(" ")
+            if len(ids) == 1:
+                semantic_net.create_object(ids[0])
+            elif len(ids) == 3:
+                o1, rel, o2 = ids[0], ids[1], ids[2]
+                semantic_net.create_relation(rel, o1, o2)

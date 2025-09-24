@@ -1,5 +1,4 @@
-from collections import Counter
-from semantic_network.net import SemanticNetwork
+from semantic_network import SemanticNetwork
 
 
 def test_acyclic():
@@ -20,5 +19,8 @@ def test_acyclic():
     sn.create_relation("rel2", "C", "D")
     sn.create_relation("rel2", "A", "D")
 
-    assert sn.is_acyclic(relation_id="rel1") == False
-    assert sn.is_acyclic(relation_id="rel2") == True
+    sn.create_relation("rel3", "C", "A")
+
+    assert sn.is_acyclic(relation_ids=["rel1"]) == False
+    assert sn.is_acyclic(relation_ids=["rel2"]) == True
+    assert sn.is_acyclic(relation_ids=["rel2", "rel3"]) == False

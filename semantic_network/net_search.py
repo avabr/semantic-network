@@ -64,8 +64,8 @@ def check_connected_and_cycled(sub_graph):
         G.add_node(hash(o.id))
     for r in sub_graph.get_relation_iterator():
         G.add_edge(hash(r.source_obj.id), hash(r.target_obj.id))
-    assert nx.is_weakly_connected(G) == True
-    assert len(list(nx.simple_cycles(G))) == 0
+    assert nx.is_weakly_connected(G) == True, 'Graph must be weakly connected'
+    assert len(list(nx.simple_cycles(G))) == 0, 'Graph must be acyclic'
 
 
 def get_start_relation_id(base_graph, sub_graph):

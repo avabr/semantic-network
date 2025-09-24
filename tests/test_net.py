@@ -1,4 +1,4 @@
-from semantic_network.net import SemanticNetwork
+from semantic_network import SemanticNetwork
 
 
 def test_net_index_consistency():
@@ -20,7 +20,7 @@ def test_net_index_consistency():
     assert len(set([r[0] for r in sn.relation_by_triplet.keys()])) == 2
     assert len(list(sn.relation_by_triplet.keys())) == 3
 
-    sn.detach_delete_object("proto@Circle")
+    sn.delete_object("proto@Circle", auto_detach=True)
 
     assert len(sn.relations_by_relation_id) == 0
     assert len(sn.relations_by_source_id) == 0

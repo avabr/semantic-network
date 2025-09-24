@@ -1,11 +1,10 @@
 from collections import Counter
-from semantic_network.net import SemanticNetwork
+from semantic_network import SemanticNetwork
 
 
-def collapse_chain_set(chain_set):
+def collapse_chain_set(matches):
     items = []
-    for chain in chain_set:
-        obj_mapping, rel_mapping = chain.get_mapping()
+    for obj_mapping, rel_mapping in matches:
         for k, v in obj_mapping.items():
             items.append(("obj", k, v))
         for k, v in rel_mapping.items():

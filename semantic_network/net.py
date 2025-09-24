@@ -1,9 +1,9 @@
 import json
-from semantic_network.net_search import search_pattern
-from semantic_network.net_archivation import SemanticNetArchiver
-from semantic_network.query import SemanticQuery
-from semantic_network.net_functions import is_graph_acyclic
-from semantic_network.script import parse_script
+from .net_search import search_pattern
+from .net_archivation import SemanticNetArchiver
+from .query import SemanticQuery
+from .net_functions import is_graph_acyclic
+from .script import parse_script
 
 
 class Object:
@@ -46,8 +46,9 @@ class Relation:
 
 
 class SemanticNetwork:
-    def __init__(self, name="Default"):
+    def __init__(self, name="Default", strict_mode=True):
         self.name = name
+        self.strict_mode = strict_mode
 
         self.objects_by_id = {}
         self.relation_by_triplet = {}
@@ -59,18 +60,62 @@ class SemanticNetwork:
         self.counter = 1
         self.counter_for_element = {}
 
+    def __str__(self):
+        n = 100
+        items = self.to_dict()["items"]
+        limited = (
+            items if len(items) < n else items[: n // 2] + ["..."] + items[-n // 2 :]
+        )
+        limited = ["|- %s" % item for item in limited]
+        limited = ["-" * 40] + limited + ["-" * 40]
+        return "\n".join(limited)
+
     @classmethod
-    def from_script(cls, script, name="Default"):
+    def from_script(cls, script, name="Default", strict_mode=False):
         items = parse_script(script)
 
-        sn = cls(name)
+        sn = cls(name, strict_mode=strict_mode)
         for ids in items:
             if len(ids) == 1:
                 sn.create_object(ids[0])
             elif len(ids) == 3:
-                sn.create_relation(ids[0], ids[1], ids[2])
+                o1, rel, o2 = ids[0], ids[1], ids[2]
+                sn.create_relation(rel, o1, o2)
 
         return sn
+
+    def append_script(self, script, strict_mode=False):
+        if strict_mode is None:
+            strict_mode = self.strict_mode
+
+        items = parse_script(script)
+
+        for ids in items:
+            if strict_mode == True:
+                if len(ids) == 1:
+                    self.create_object(ids[0])
+                elif len(ids) == 3:
+                    o1, rel, o2 = ids[0], ids[1], ids[2]
+                    self.create_relation(rel, o1, o2)
+            else:
+                if len(ids) == 1:
+                    self.get_or_create_object(ids[0])
+                elif len(ids) == 3:
+                    o1, rel, o2 = ids[0], ids[1], ids[2]
+                    self.get_or_create_object(o1)
+                    self.get_or_create_object(o2)
+                    self.get_or_create_relation(rel, o1, o2)
+
+        return self
+
+    def delete_script(self, script, auto_detach=False):
+        items = parse_script(script)
+        for ids in items:
+            if len(ids) == 1:
+                self.delete_object(ids[0], auto_detach=auto_detach)
+            elif len(ids) == 3:
+                o1, rel, o2 = ids[0], ids[1], ids[2]
+                self.delete_relation(rel, o1, o2)
 
     def _update_counter(self, obj_or_rel):
         self.counter_for_element[obj_or_rel] = self.counter
@@ -104,34 +149,48 @@ class SemanticNetwork:
             obj = self.create_object(obj_id)
         return obj
 
-    def delete_object(self, obj_id):
+    def delete_object(self, obj_id, auto_detach=False):
         assert obj_id in self.objects_by_id
-        assert len(self.relations_by_source_id.get(obj_id, set())) == 0
-        self.relations_by_source_id.pop(obj_id, None)
-        assert len(self.relations_by_target_id.get(obj_id, set())) == 0
-        self.relations_by_target_id.pop(obj_id, None)
-        obj = self.objects_by_id.pop(obj_id)
-        self.counter_for_element.pop(obj)
 
-    def detach_delete_object(self, obj_id):
-        assert obj_id in self.objects_by_id
-        in_relations = self.relations_by_target_id.get(obj_id, set())
-        out_relations = self.relations_by_source_id.get(obj_id, set())
-        relations = in_relations.union(out_relations)
-        for r in relations:
-            self.delete_relation(r.id, r.source_obj.id, r.target_obj.id)
-        self.delete_object(obj_id)
+        if auto_detach == False:
+            assert len(self.relations_by_source_id.get(obj_id, set())) == 0
+            self.relations_by_source_id.pop(obj_id, None)
+            assert len(self.relations_by_target_id.get(obj_id, set())) == 0
+            self.relations_by_target_id.pop(obj_id, None)
+            obj = self.objects_by_id.pop(obj_id)
+            self.counter_for_element.pop(obj)
+
+        else:
+            assert obj_id in self.objects_by_id
+            in_relations = self.relations_by_target_id.get(obj_id, set())
+            out_relations = self.relations_by_source_id.get(obj_id, set())
+            relations = in_relations.union(out_relations)
+            for r in relations:
+                self.delete_relation(r.id, r.source_obj.id, r.target_obj.id)
+            self.delete_object(obj_id)
 
     def relation_exists(self, id, source_obj_id, target_obj_id):
-        return (id, source_obj_id, target_obj_id) in self.self.relation_by_triplet
+        return (id, source_obj_id, target_obj_id) in self.relation_by_triplet
 
     def get_relation(self, id, source_obj_id, target_obj_id):
         r = self.relation_by_triplet[(id, source_obj_id, target_obj_id)]
         return r
 
     def create_relation(self, id, source_obj_id, target_obj_id):
-        assert source_obj_id in self.objects_by_id
-        assert target_obj_id in self.objects_by_id
+        if source_obj_id not in self.objects_by_id:
+            if self.strict_mode == True:
+                m = "Object %s is not found." % source_obj_id
+                raise ValueError(m)
+            else:
+                self.create_object(source_obj_id)
+
+        if target_obj_id not in self.objects_by_id:
+            if self.strict_mode == True:
+                m = "Object %s is not found." % target_obj_id
+                raise ValueError(m)
+            else:
+                self.create_object(target_obj_id)
+
         triplet = (id, source_obj_id, target_obj_id)
         assert triplet not in self.relation_by_triplet, triplet
         source_obj = self.objects_by_id[source_obj_id]
@@ -171,7 +230,11 @@ class SemanticNetwork:
         self.counter_for_element.pop(rel)
 
     def select_relations(self, relation_id, source_id, target_id):
-        in_status = (relation_id is not None, source_id is not None, target_id is not None)
+        in_status = (
+            relation_id is not None,
+            source_id is not None,
+            target_id is not None,
+        )
         if in_status == (False, False, False):
             relations = self.relation_by_triplet.values()
         elif in_status == (True, False, False):
@@ -203,7 +266,11 @@ class SemanticNetwork:
 
     def get_matched_relation(self, q_rel_id, q_source_id, q_target_id, query_match):
         obj_map, rel_map = query_match.get_mapping()
-        rel_id, source_id, target_id = rel_map[q_rel_id], obj_map[q_source_id], obj_map[q_target_id]
+        rel_id, source_id, target_id = (
+            rel_map[q_rel_id],
+            obj_map[q_source_id],
+            obj_map[q_target_id],
+        )
         return self.get_relation(rel_id, source_id, target_id)
 
     def get_matched_object(self, q_obj_id, query_match):
@@ -212,17 +279,18 @@ class SemanticNetwork:
         return self.get_object(obj_id)
 
     def search_pattern(self, sub_graph, required_obj_ids, required_rel_ids):
-        return search_pattern(self, sub_graph, required_obj_ids, required_rel_ids)
+        matches = search_pattern(self, sub_graph, required_obj_ids, required_rel_ids)
+        return (m.get_mapping() for m in matches)
 
-    def search_query_script(self, query_script):
-        return SemanticQuery(self, query_script)
+    def query(self, query_script, strict_mode=False):
+        return SemanticQuery(self, query_script, strict_mode=strict_mode)
 
-    def is_acyclic(self, relation_id):
-        return is_graph_acyclic(self, relation_id)
+    def is_acyclic(self, relation_ids):
+        return is_graph_acyclic(self, relation_ids)
 
     def collect_relation_chains(self, relation_id):
 
-        assert self.is_acyclic(relation_id)
+        assert self.is_acyclic([relation_id])
 
         rels = self.relations_by_relation_id.get(relation_id, [])
         parents = set([r.target_obj for r in rels])
@@ -252,7 +320,8 @@ class SemanticNetwork:
             "-----------------------------",
             "SemanticNetwork: %s" % self.name,
             "\tUnique objects %s" % len(self.objects_by_id),
-            "\tUnique relations %s" % len(set([r[0] for r in self.relation_by_triplet.keys()])),
+            "\tUnique relations %s"
+            % len(set([r[0] for r in self.relation_by_triplet.keys()])),
             "\tTotal relations %s" % len(list(self.relation_by_triplet.keys())),
             "-----------------------------",
         ]

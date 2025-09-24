@@ -1,6 +1,4 @@
-import re
-import json
-from semantic_network.script import parse_script
+from .script import parse_script
 
 
 class SemanticQuery:
@@ -24,7 +22,7 @@ class SemanticQuery:
                 new_items.append([obj_id])
 
             elif len(elements) == 3:
-                rel_id, source_obj_id, target_obj_id = elements
+                source_obj_id, rel_id, target_obj_id = elements
 
                 if rel_id[0] == "*":
                     rel_id = rel_id[1:]
@@ -42,27 +40,28 @@ class SemanticQuery:
                 else:
                     required_obj_ids.add(target_obj_id)
 
-                new_items.append([rel_id, source_obj_id, target_obj_id])
+                new_items.append([source_obj_id, rel_id, target_obj_id])
 
         assert len(required_obj_ids.intersection(optional_obj_ids)) == 0
         assert len(required_rel_ids.intersection(optional_rel_ids)) == 0
 
         return new_items, required_obj_ids, required_rel_ids
 
-    def __init__(self, semantic_network, query_script):
+    def __init__(self, semantic_network, query_script, strict_mode):
         self.semantic_network = semantic_network
         self.query_script = query_script
         parsed_items = parse_script(query_script, query_script=True)
-        splitted_items, required_obj_ids, required_rel_ids = self._split_required_query_items(
-            parsed_items
+        splitted_items, required_obj_ids, required_rel_ids = (
+            self._split_required_query_items(parsed_items)
         )
 
-        q = semantic_network.__class__("Query")
+        q = semantic_network.__class__("Query", strict_mode=strict_mode)
         for ids in splitted_items:
             if len(ids) == 1:
                 q.create_object(ids[0])
             elif len(ids) == 3:
-                q.create_relation(ids[0], ids[1], ids[2])
+                o1, rel, o2 = ids[0], ids[1], ids[2]
+                q.create_relation(rel, o1, o2)
 
         self.q = q
         self.required_obj_ids = required_obj_ids
