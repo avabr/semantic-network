@@ -1,7 +1,7 @@
 import json
 from .net_search import search_pattern
 from .net_archivation import SemanticNetArchiver
-from .query import SemanticQuery
+from .query import perform_query
 from .net_functions import is_graph_acyclic
 from .script import parse_script
 
@@ -282,8 +282,8 @@ class SemanticNetwork:
         matches = search_pattern(self, sub_graph, required_obj_ids, required_rel_ids)
         return (m.get_mapping() for m in matches)
 
-    def query(self, query_script, strict_mode=False):
-        return SemanticQuery(self, query_script, strict_mode=strict_mode)
+    def query(self, query, exclude=None, strict_mode=False):
+        return perform_query(self, query, exclude, strict_mode)
 
     def is_acyclic(self, relation_ids):
         return is_graph_acyclic(self, relation_ids)

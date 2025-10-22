@@ -72,3 +72,35 @@ class SemanticQuery:
             self.q, self.required_obj_ids, self.required_rel_ids
         )
         return iter(res)
+
+
+def perform_query(semnet, query, exclude, strict_mode):
+    if exclude is None:
+        matches = list(SemanticQuery(semnet, query, strict_mode=strict_mode))
+    else:
+        full_script = query + exclude
+        matches = list(SemanticQuery(semnet, query, strict_mode=strict_mode))
+        if len(matches) > 0:
+            obj_keys = list(matches[0][0].keys())
+            rel_keys = list(matches[0][1].keys())
+            matches_full = list(
+                SemanticQuery(semnet, full_script, strict_mode=strict_mode)
+            )
+            keys = set()
+            for objs, rels in matches_full:
+                key = " ".join(
+                    ["%s=%s" % (o, objs[o]) for o in obj_keys]
+                    + ["%s=%s" % (o, rels[o]) for o in rel_keys]
+                )
+                keys.add(key)
+            filtered = []
+            for objs, rels in matches:
+                key = " ".join(
+                    ["%s=%s" % (o, objs[o]) for o in obj_keys]
+                    + ["%s=%s" % (o, rels[o]) for o in rel_keys]
+                )
+                if key not in keys:
+                    filtered.append((objs, rels))
+            matches = filtered
+
+    return matches

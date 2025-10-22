@@ -1,6 +1,19 @@
 import re
 
 
+def clean_script(script: str):
+    """
+    Clean script: remove empty lines and comments:
+    - remove line if l.scrip() == ''
+    - remove line if l.scrip()[:2] == '--'
+    """
+    lines = []
+    for line in script.strip().split("\n"):
+        if (line.strip() != "") and (line.strip()[:2] != "--"):
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def decompose_multiline_script(script):
 
     new_lines = []
@@ -28,6 +41,8 @@ def decompose_multiline_script(script):
 
 
 def parse_script(script, query_script=False):
+
+    script = clean_script(script)
 
     if type(script) in (list, tuple):
         script = "\n".join(script)
